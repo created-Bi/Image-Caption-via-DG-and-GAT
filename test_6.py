@@ -68,6 +68,7 @@ def caption_image_beam_search(encoder, decoder, image_path, word_map, ds_map):
 
     root_node_idx = decoder.root_classifier(encoder_out_root).to(device)
     root_node_idx = root_node_idx.squeeze(1)
+    root_node_embedding = decoder.words_embedding(root_node_idx)
     # print(root_node_idx)
     left, left_dis = decoder.graph_left_encoding(root_node_idx, encoder_out_root, decoder.words_embedding, decoder.dis_embedding)
     right, right_dis = decoder.graph_right_encoding(root_node_idx, encoder_out_root, decoder.words_embedding, decoder.dis_embedding)
@@ -76,7 +77,8 @@ def caption_image_beam_search(encoder, decoder, image_path, word_map, ds_map):
     left_words_embeddings = torch.add(left_root_node_embeddings, left_dis)  # 1, iter_times, embedding_dim
     right_words_embeddings = torch.add(right_root_node_embeddings, right_dis)  # 1, iter_times, embedding_dim
 
-    graph_embeddings = decoder.graph_self_attention(q=left_words_embeddings, k=right_words_embeddings, v=right_words_embeddings, mask=None)
+    graph_embeddings = torch.add(left_graph_embeddings, right_graph_embeddings)  # batch_size, iter_times, embedding_dim
+    graph_embeddings = torch.add(graph_embeddings, root_node_embedding) 
     # Start decoding
     step = 1
     h1, c1, h2, c2 = decoder.generation.init_hidden_state(encoder_out, graph_embeddings)
